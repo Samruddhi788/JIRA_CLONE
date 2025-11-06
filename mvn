@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# wrapper: run `mvn clean install` from the script directory
+# Save this file as /C:/New folder/demo/mvn and make it executable (chmod +x mvn) if using a POSIX-like shell.
+
+set -euo pipefail
+
+# Resolve real script directory (works with symlinks)
+SOURCE="${BASH_SOURCE[0]:-$0}"
+while [ -h "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+
+cd "$DIR"
+
+if ! command -v mvn >/dev/null 2>&1; then
+    echo "Error: 'mvn' not found in PATH. Install Apache Maven or add it to PATH." >&2
+    exit 1
+fi
+
+# Run Maven clean install, forwarding any additional arguments
+mvn clean install "$@"

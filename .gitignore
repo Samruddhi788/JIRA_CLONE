@@ -1,0 +1,30 @@
+# === MAVEN / SPRING BOOT BACKEND ===
+target/
+build/
+out/
+bin/
+*.log
+*.class
+*.jar
+*.war
+*.ear
+application.properties
+
+# === DEPENDENCY CACHES ===
+.m2/
+.gradle/
+.lemminx/
+.cache/
+
+# === IDE / SYSTEM FILES ===
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# === NODE / ANGULAR FRONTEND ===
+node_modules/
+dist/
+.env
+.angular/
