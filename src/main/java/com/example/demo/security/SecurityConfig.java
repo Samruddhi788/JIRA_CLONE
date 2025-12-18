@@ -6,19 +6,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-
-import org.springframework.security.core.userdetails.UserDetailsService;
-
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,6 +21,7 @@ public class SecurityConfig {
 
     // Authentication provider (uses UserDetailsService + PasswordEncoder)
     private final AuthenticationProvider authenticationProvider;
+    
 
         private final UserDetailsService userDetailsService;
 
@@ -46,7 +37,9 @@ public class SecurityConfig {
 
             // STEP 2: Define public & protected endpoints
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll() // login/register allowed
+                .requestMatchers("/auth/**",
+                    "/error" 
+                ).permitAll() // login/register allowed
                 .anyRequest().authenticated()            // everything else needs JWT
             )
 

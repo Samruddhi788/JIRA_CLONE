@@ -1,7 +1,6 @@
 package com.example.demo.security;
 
 import java.io.IOException;
-import java.util.Optional;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -10,7 +9,6 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.services.JwtService;
 
@@ -32,6 +30,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         // TODO Auto-generated method stub
+        String path = request.getServletPath();
+         
+    if (path.startsWith("/auth")) {
+        filterChain.doFilter(request, response);
+        return;
+    }
+    //this is done else during login as well it will check if toekn exixts or not 
+    //hence we checn ans then pass it through the filterchain 
            final String authHeader= request.getHeader("Authorization");
            final String jwt;
            final String userName;
@@ -52,13 +58,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
               if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
             // 5️⃣ Load user from DB
+            logger.debug("Loading user details for {}");
             UserDetails userDetails = userRepository
                     .findUserByEmail(userName)
                     .orElse(null);
 
             // 6️⃣ Validate token with user details
             if (userDetails != null && jwtService.isTokenValid(jwt, userDetails)) {
-
+                logger.debug("Token is valid, setting authentication for {}");
                 // 7️⃣ Create authentication token
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
@@ -68,6 +75,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         );
 
                 // 8️⃣ Attach request details
+                 logger.debug("Checked the validation ");
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                         //passing request with details like ip address session id etc so that it hepls in audits and logging 

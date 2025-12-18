@@ -88,7 +88,7 @@ public class User implements UserDetails{
         this.isActive = true;
     }
 
-    public boolean isIsActive() {
+    public boolean isActive() {
        // isActive = true;
         return isActive;
     }
