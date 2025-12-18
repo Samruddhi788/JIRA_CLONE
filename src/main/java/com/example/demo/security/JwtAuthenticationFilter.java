@@ -1,8 +1,13 @@
 package com.example.demo.security;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -12,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.services.JwtService;
 
+import io.jsonwebtoken.Claims;
 import io.micrometer.common.lang.NonNull;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,138 +25,88 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
+
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-     final JwtService jwtService;
-     final UserRepository userRepository;
-     
+
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
+
     @Override
     protected void doFilterInternal(
-        @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
-            throws ServletException, IOException {
-        // TODO Auto-generated method stub
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
+
         String path = request.getServletPath();
-         
-    if (path.startsWith("/auth")) {
-        filterChain.doFilter(request, response);
-        return;
-    }
-    //this is done else during login as well it will check if toekn exixts or not 
-    //hence we checn ans then pass it through the filterchain 
-           final String authHeader= request.getHeader("Authorization");
-           final String jwt;
-           final String userName;
-           if(authHeader==null || !authHeader.startsWith("Bearer ")){
+
+        // 1️⃣ Skip auth endpoints
+        if (path.startsWith("/auth")) {
             filterChain.doFilter(request, response);
             return;
-           }
-              jwt= authHeader.substring(7);
-             // userName= jwtService.extractUsername(jwt); 
-              try{
-                userName=jwtService.extractUsername(jwt);
-                }catch (Exception e){
-                    filterChain.doFilter(request, response);
-                    return; 
-                    // this is to make sure that we proceed with the filter chain even if an exception occurs 
-                    // so that spring decides whats to be done or not 
-              }
-              if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        }
 
-            // 5️⃣ Load user from DB
-            logger.debug("Loading user details for {}");
+        // 2️⃣ Read Authorization header
+        final String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        final String jwt = authHeader.substring(7);
+        final String username;
+
+        try {
+            username = jwtService.extractUsername(jwt);
+        } catch (Exception e) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // 3️⃣ Authenticate only once per request
+        if (username != null &&
+                SecurityContextHolder.getContext().getAuthentication() == null) {
+
             UserDetails userDetails = userRepository
-                    .findUserByEmail(userName)
+                    .findUserByEmail(username)
                     .orElse(null);
 
-            // 6️⃣ Validate token with user details
             if (userDetails != null && jwtService.isTokenValid(jwt, userDetails)) {
-                logger.debug("Token is valid, setting authentication for {}");
-                // 7️⃣ Create authentication token
+
+                /* ===============================
+                   🔑 ROLE EXTRACTION FROM JWT
+                   =============================== */
+
+                Claims claims = jwtService.extractAllClaims(jwt);
+
+                List<String> roles = claims.get("roles", List.class);
+
+                Collection<GrantedAuthority> authorities =
+                        roles.stream()
+                             .map(SimpleGrantedAuthority::new)
+                             .collect(Collectors.toList());
+                             //never use tolist here as it is not supported in java 8
+
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,
                                 null,
-                                userDetails.getAuthorities()
+                                authorities
                         );
 
-                // 8️⃣ Attach request details
-                 logger.debug("Checked the validation ");
                 authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                        //passing request with details like ip address session id etc so that it hepls in audits and logging 
+                        new WebAuthenticationDetailsSource()
+                                .buildDetails(request)
                 );
 
-                // 9️⃣ Set authentication in SecurityContext
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                SecurityContextHolder
+                        .getContext()
+                        .setAuthentication(authToken);
             }
         }
-              filterChain.doFilter(request, response);
+
+        filterChain.doFilter(request, response);
     }
-    // Implementation of JWT Authentication Filter
 }
-/*
-========================================================
-JWT AUTHENTICATION FILTER — COMPLETE FLOW EXPLANATION
-========================================================
-
-1) This filter runs ON EVERY HTTP REQUEST before the controller.
-
-2) It looks for the Authorization header in the format:
-   Authorization: Bearer <JWT_TOKEN>
-
-3) If the header is missing OR does not start with "Bearer ",
-   the request is passed to the next filter WITHOUT authentication.
-   (This allows public endpoints to work.)
-
-4) If a token exists:
-   - The token signature is VERIFIED using the secret key.
-   - If the payload or signature is tampered with, parsing fails immediately.
-   - No claims are read if the signature is invalid.
-
-5) After successful verification:
-   - The username (email) is extracted from the token's "subject".
-   - This does NOT hit the database yet.
-
-6) Authentication is performed ONLY if:
-   - Username is not null
-   - No authentication already exists in SecurityContext
-   (Prevents duplicate authentication for the same request.)
-
-7) The user is then loaded from the database using the extracted username:
-   - Confirms user still exists
-   - Retrieves latest roles/authorities
-   - Ensures account is active
-
-8) Token is validated against the loaded user:
-   - Username in token must match DB user
-   - Token must not be expired
-
-9) If valid:
-   - A UsernamePasswordAuthenticationToken is created
-   - Credentials are set to null (password is NEVER stored post-login)
-   - Authorities (roles) are attached
-
-10) Request-specific details (IP, session, metadata) are attached
-    for auditing and security context.
-
-11) The authentication object is stored in SecurityContextHolder.
-    From this point forward:
-    - Spring considers the user AUTHENTICATED
-    - @PreAuthorize and role checks start working
-    - Controllers can safely execute
-
-12) filterChain.doFilter(request, response) is ALWAYS called:
-    - To continue to the next filter
-    - Or to reach the controller
-    - Without this call, the request will never complete
-
-SECURITY GUARANTEES:
-✔ Stateless authentication (no session stored)
-✔ No password used after login
-✔ Token tampering is impossible without the secret key
-✔ Database is used ONLY to verify user existence & roles
-✔ Fully scalable authentication mechanism
-
-========================================================
-*/

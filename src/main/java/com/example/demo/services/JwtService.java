@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -27,9 +28,20 @@ public class JwtService {
        ====================================================== */
 
     // Public method: generates JWT for a given user with no extra claims
+    // public String generateToken(UserDetails userDetails) {
+    //     return generateToken(Map.of(), userDetails);
+    // This is the updated one to generate token with roles as claims
     public String generateToken(UserDetails userDetails) {
-        return generateToken(Map.of(), userDetails);
-    }
+    Map<String, Object> claims = Map.of(
+        "roles",
+        userDetails.getAuthorities()
+            .stream()
+            .map(GrantedAuthority::getAuthority)
+            .toList()
+    );
+
+    return generateToken(claims, userDetails);
+}
 
     // Core token generation logic
     private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
@@ -83,7 +95,7 @@ public class JwtService {
     }
 
     // Parse JWT, verify signature, and return claims
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 // Set signing key to verify token integrity
                 .setSigningKey(getSignInKey())

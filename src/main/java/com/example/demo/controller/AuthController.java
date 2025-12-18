@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,8 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.AuthResponse;
 import com.example.demo.dto.LoginRequest;
-import com.example.demo.dto.RegisterRequest;
-import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.services.JwtService;
 
@@ -29,28 +28,29 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
         private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-      @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    //  @PostMapping("/register")
+    // public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
 
-        log.debug("➡️ Register attempt for email: {}", request.getEmail());
+    //     log.debug("➡️ Register attempt for email: {}", request.getEmail());
 
-        if (userRepository.findUserByEmail(request.getEmail()).isPresent()) {
-            log.warn("❌ Email already exists: {}", request.getEmail());
-            return ResponseEntity.badRequest().body("Email already registered");
-        }
+    //     if (userRepository.findUserByEmail(request.getEmail()).isPresent()) {
+    //         log.warn("❌ Email already exists: {}", request.getEmail());
+    //         return ResponseEntity.badRequest().body("Email already registered");
+    //     }
 
-        User user = new User();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setIsActive(true);
+    //     User user = new User();
+    //     user.setName(request.getName());
+    //     user.setEmail(request.getEmail());
+    //     user.setPassword(passwordEncoder.encode(request.getPassword()));
+    //     user.setIsActive(true);
 
-        userRepository.save(user);
+    //     userRepository.save(user);
 
-        log.debug("✅ User registered successfully: {}", request.getEmail());
-        return ResponseEntity.ok("User registered successfully");
-    }
+    //     log.debug("✅ User registered successfully: {}", request.getEmail());
+    //     return ResponseEntity.ok("User registered successfully");
+    //}
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
@@ -68,8 +68,10 @@ public class AuthController {
 
             log.debug("✅ Authentication SUCCESS for email: {}",
                       request.getEmail());
+//this will genarte a token upon login 
 
-            return ResponseEntity.ok("Login successful");
+           String token = jwtService.generateToken((UserDetails) authentication.getPrincipal());
+return ResponseEntity.ok(new AuthResponse(token));
 
         } catch (Exception ex) {
             log.error("❌ Authentication FAILED for email: {}",
