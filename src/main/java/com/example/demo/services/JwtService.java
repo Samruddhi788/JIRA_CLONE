@@ -21,7 +21,7 @@ public class JwtService {
     // Secret key used to SIGN and VERIFY JWTs
     // Must be kept private. This is Base64-decoded for HS256 algorithm.
     private static final String SECRET_KEY =
-            "33e2e10a559851182647f1fbe9245b1228a343c7fe9557d7067c4a4349f7cfde";
+            "c3VwZXItc2VjcmV0LWp3dC1rZXktZm9yLWhzMjU2LXNpZ25pbmc=";//trap 1 we did not have a kety for base 64
 
     /* ======================================================
        TOKEN GENERATION
@@ -31,34 +31,28 @@ public class JwtService {
     // public String generateToken(UserDetails userDetails) {
     //     return generateToken(Map.of(), userDetails);
     // This is the updated one to generate token with roles as claims
-    public String generateToken(UserDetails userDetails) {
+   
+
+    // Core token generation logic
+   public String generateToken(UserDetails userDetails) {
+
     Map<String, Object> claims = Map.of(
         "roles",
         userDetails.getAuthorities()
             .stream()
             .map(GrantedAuthority::getAuthority)
-            .toList()
+            .collect(java.util.stream.Collectors.toList())
     );
 
-    return generateToken(claims, userDetails);
+    return Jwts.builder()
+            .setClaims(claims)
+            .setSubject(userDetails.getUsername())
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 24h
+            .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+            .compact();
 }
 
-    // Core token generation logic
-    private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
-        return Jwts.builder()
-                // Optional custom claims (roles, department, etc.)
-                .setClaims(extraClaims)
-                // "sub" claim → uniquely identifies the user
-                .setSubject(userDetails.getUsername())
-                // Token creation time
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                // Token expiration (24 hours from now)
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
-                // SIGN token with HMAC-SHA256 + secret key → ensures integrity/authenticity
-                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
-                // Compact JWT string: header.payload.signature
-                .compact();
-    }
 
     /* ======================================================
        TOKEN VALIDATION

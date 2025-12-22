@@ -5,65 +5,72 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import lombok.RequiredArgsConstructor;
+import com.example.demo.repository.UserRepository;
 
-@Configuration
+import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
+@Configuration
 public class SecurityConfig {
 
-    // Custom JWT filter that we created in previous steps
-    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    // Authentication provider (uses UserDetailsService + PasswordEncoder)
-    private final AuthenticationProvider authenticationProvider;
-    
+    @Bean
+    public UserDetailsService userDetailsService(UserRepository userRepository) {
+        return username -> userRepository.findUserByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
 
-        private final UserDetailsService userDetailsService;
+    @Bean
+    public AuthenticationProvider authenticationProvider(
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder
+    ) {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder);
+        return authProvider;
+    }
 
-
-
-    
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            // STEP 1: Disable CSRF because JWT is stateless (no session)
             .csrf(csrf -> csrf.disable())
-
-            // STEP 2: Define public & protected endpoints
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**",
-                    "/error" 
-                ).permitAll() // login/register allowed
-                .anyRequest().authenticated()            // everything else needs JWT
+                .requestMatchers("/auth/**", "/error").permitAll()
+                .anyRequest().authenticated()
             )
-
-            // STEP 3: Make session stateless (JWT replaces session)
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-
-            // STEP 4: Tell Spring how authentication should work
-            .authenticationProvider(authenticationProvider)
-
-            // STEP 5: Add JWT filter BEFORE default auth filter
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .authenticationProvider(authenticationProvider(
+                userDetailsService(null), passwordEncoder()
+            ))
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-     @Bean
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration config
     ) throws Exception {
         return config.getAuthenticationManager();
     }
-
-    
 }

@@ -10,6 +10,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
@@ -17,6 +19,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
@@ -33,6 +36,12 @@ public class User implements UserDetails{
     private boolean isActive;
     @ElementCollection(fetch=FetchType.EAGER)
     @Enumerated(jakarta.persistence.EnumType.STRING)
+    @CollectionTable(
+    name = "user_roles",
+    joinColumns = @JoinColumn(name = "user_id")
+)
+@Column(name = "role")//this is added for us to know which column to look for roles in user_roles table
+//else it can work without it too but for our convinebce we add it
     private List <Roles> roles;
     
 @OneToMany(mappedBy="user")
@@ -80,6 +89,12 @@ public class User implements UserDetails{
     }
     public User() {
     }
+    public List<Roles> getRoles() {
+        return roles;
+    }
+    public void setRoles(List<Roles> roles) {
+        this.roles = roles;
+    }
  public User(String name, String email, String password) {
         this.email = email;
        // this.id = id;
@@ -99,11 +114,17 @@ public class User implements UserDetails{
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+         if (roles == null) {
+        System.out.println("⚠️ Roles is NULL for user: " + email);
+        return List.of();
+    }
+       System.out.println("User Roles for " + email + ": " + roles);
         return roles.stream()
                 .map(role->new SimpleGrantedAuthority("ROLE_" + role.name()))
                 .collect(Collectors.toList());
         
     }
+    
 
     @Override
     public String getUsername() {
@@ -131,4 +152,5 @@ public class User implements UserDetails{
         // TODO Auto-generated method stub
         return isActive;
     }
+    
 }
