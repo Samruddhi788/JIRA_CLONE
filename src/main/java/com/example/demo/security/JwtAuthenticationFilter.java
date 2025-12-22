@@ -24,11 +24,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-
-@Component
-
+@Bean
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-private final JwtService jwtService;
+
+    private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
     public JwtAuthenticationFilter(
@@ -39,7 +38,6 @@ private final JwtService jwtService;
         this.userDetailsService = userDetailsService;
     }
 
-
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
@@ -49,13 +47,12 @@ private final JwtService jwtService;
 
         String path = request.getServletPath();
 
-        // 1️⃣ Skip auth endpoints
+        // Skip auth endpoints
         if (path.startsWith("/auth")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 2️⃣ Read Authorization header
         final String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -72,19 +69,12 @@ private final JwtService jwtService;
             return;
         }
 
-        // 3️⃣ Authenticate only once per request
         if (username != null &&
                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            UserDetails userDetails =
-        userDetailsService.loadUserByUsername(username);
-
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
             if (userDetails != null && jwtService.isTokenValid(jwt, userDetails)) {
-
-                /* ===============================
-                   🔑 ROLE EXTRACTION FROM JWT
-                   =============================== */
 
                 Claims claims = jwtService.extractAllClaims(jwt);
 
@@ -94,7 +84,6 @@ private final JwtService jwtService;
                         roles.stream()
                              .map(SimpleGrantedAuthority::new)
                              .collect(Collectors.toList());
-                             //never use tolist here as it is not supported in java 8
 
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
@@ -104,13 +93,10 @@ private final JwtService jwtService;
                         );
 
                 authToken.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request)
+                        new WebAuthenticationDetailsSource().buildDetails(request)
                 );
 
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(authToken);
+                SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
 
