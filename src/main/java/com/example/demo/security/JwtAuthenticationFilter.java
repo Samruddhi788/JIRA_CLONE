@@ -10,6 +10,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -32,6 +33,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final UserDetailsService userDetailsService;
+
 
     @Override
     protected void doFilterInternal(
@@ -69,9 +72,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (username != null &&
                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            UserDetails userDetails = userRepository
-                    .findUserByEmail(username)
-                    .orElse(null);
+            UserDetails userDetails =
+        userDetailsService.loadUserByUsername(username);
+
 
             if (userDetails != null && jwtService.isTokenValid(jwt, userDetails)) {
 

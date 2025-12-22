@@ -59,6 +59,7 @@ public class AuthController {
 
         try {
             Authentication authentication =
+            //glows everything together to authenticate user
                 authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
