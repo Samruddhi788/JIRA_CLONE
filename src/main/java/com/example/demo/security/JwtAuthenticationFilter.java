@@ -29,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+ 
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
@@ -37,6 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
     }
+    
 
     @Override
     protected void doFilterInternal(
@@ -46,7 +48,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         String path = request.getServletPath();
-
+         System.out.println("---- JWT FILTER START ----");
+   System.out.println("Request path: " + request.getServletPath());
         // Skip auth endpoints
         if (path.startsWith("/auth")) {
             filterChain.doFilter(request, response);
@@ -61,6 +64,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String jwt = authHeader.substring(7);
         final String username;
+        System.out.println(">>>>>>>Authorization header: " + authHeader);
+
 
         try {
             username = jwtService.extractUsername(jwt);

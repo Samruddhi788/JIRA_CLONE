@@ -15,16 +15,27 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import com.example.demo.security.JwtAuthenticationFilter;
+
 import com.example.demo.repository.UserRepository;
+import com.example.demo.services.JwtService;
 
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Configuration
 public class SecurityConfig {
+    private final UserRepository userRepository;
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Bean
+    public JwtService jwtService() {
+        return new JwtService();
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+        return new JwtAuthenticationFilter(jwtService, userDetailsService);
+    }
+
 
     @Bean
     public UserDetailsService userDetailsService(UserRepository userRepository) {
@@ -61,8 +72,8 @@ public SecurityFilterChain securityFilterChain(
             session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         )
         .authenticationProvider(authenticationProvider)
-        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
+        .addFilterBefore(jwtAuthenticationFilter(jwtService(), userDetailsService(userRepository)), 
+                     UsernamePasswordAuthenticationFilter.class);
     System.out.println("Configured SecurityFilterChain");
     return http.build();
 }
