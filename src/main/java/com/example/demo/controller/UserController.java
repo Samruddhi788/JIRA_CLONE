@@ -19,7 +19,7 @@ import com.example.demo.services.UserService;
 
 
 @RestController
-
+@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/users")
 public class UserController {
     @Autowired
