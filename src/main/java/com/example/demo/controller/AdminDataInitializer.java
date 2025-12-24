@@ -24,8 +24,8 @@ public class AdminDataInitializer {
             // Create fresh admin with roles
             User admin = new User();
             admin.setName("System Admin");
-            admin.setEmail("admin@example.com");
-            admin.setPassword(passwordEncoder.encode("admin123"));
+            admin.setEmail("admin123@example.com");
+            admin.setPassword(passwordEncoder.encode("admin123456"));
             admin.setIsActive(true);
             admin.setRoles(List.of(Roles.ADMIN)); // ✅ Assign role properly
 
