@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.AuthResponse;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.repository.UserRepository;
@@ -53,30 +54,22 @@ public class AuthController {
     //}
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+public ResponseEntity<ApiResponse<AuthResponse>> login(
+        @RequestBody LoginRequest request) {
 
-        log.debug("➡️ Login attempt for email: {}", request.getEmail());
+    Authentication authentication =
+        authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                request.getEmail(), request.getPassword()
+            )
+        );
 
-        try {
-            Authentication authentication =
-                authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                    )
-                );
+    String token = jwtService.generateToken(
+        (UserDetails) authentication.getPrincipal()
+    );
 
-            log.debug("✅ Authentication SUCCESS for email: {}",
-                      request.getEmail());
-//this will genarte a token upon login 
-
-           String token = jwtService.generateToken((UserDetails) authentication.getPrincipal());
-return ResponseEntity.ok(new AuthResponse(token));
-
-        } catch (Exception ex) {
-            log.error("❌ Authentication FAILED for email: {}",
-                      request.getEmail(), ex);
-            throw ex;
-        }
-    }
+    return ResponseEntity.ok(
+        ApiResponse.success("Login successful", new AuthResponse(token))
+    );
+}
 }
