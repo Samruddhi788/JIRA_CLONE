@@ -15,7 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import com.example.demo.security.CustomUserDetailsService;
+
 import com.example.demo.repository.UserRepository;
 import com.example.demo.services.JwtService;
 
@@ -90,3 +90,21 @@ public SecurityFilterChain securityFilterChain(
         return config.getAuthenticationManager();
     }
 }
+/*
+git filter-branch --env-filter '
+OLD_EMAIL="old@email.com"
+CORRECT_NAME="Samruddhi788"
+CORRECT_EMAIL="patilsamruddhir2018@gmail.com"
+
+if [ "$GIT_COMMITTER_EMAIL" = "$OLD_EMAIL" ]
+then
+  export GIT_COMMITTER_NAME="$CORRECT_NAME"
+  export GIT_COMMITTER_EMAIL="$CORRECT_EMAIL"
+fi
+if [ "$GIT_AUTHOR_EMAIL" = "$OLD_EMAIL" ]
+then
+  export GIT_AUTHOR_NAME="$CORRECT_NAME"
+  export GIT_AUTHOR_EMAIL="$CORRECT_EMAIL"
+fi
+' -- --all
+ */
