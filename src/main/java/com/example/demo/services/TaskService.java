@@ -5,11 +5,15 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.exception.BadRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Project;
+import com.example.demo.model.Status;
 import com.example.demo.model.Task;
 import com.example.demo.model.User;
 import com.example.demo.repository.TaskRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class TaskService {
@@ -22,8 +26,10 @@ public class TaskService {
 
     @Autowired
     private UserService userService;
+    
 
     public void saveTask(Long projectId, Task task) {
+        
         Project project = projectService.getProjectById(projectId);
 
         project.getTasks().add(task);
@@ -96,4 +102,29 @@ public class TaskService {
 
         taskRepository.save(task);
     }
+    public User getAssignedUser(Long taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Task not found with id: " + taskId));
+
+        return task.getUser();
+    }
+   
+    @Transactional
+public void changeTaskStatus(Long taskId, Status newStatus) {
+
+    Task task = taskRepository.findById(taskId)
+            .orElseThrow(() -> new RuntimeException("Task not found"));
+
+    if (task.getUser() == null) {
+        throw new RuntimeException("Task must be assigned first");
+    }
+
+    task.setStatus(newStatus);
+
+    // 🔥 FORCE FLUSH — NO SILENT FAILURE POSSIBLE
+    taskRepository.saveAndFlush(task);
+
+}
+
 }

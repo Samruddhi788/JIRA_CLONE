@@ -4,7 +4,10 @@ import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -22,7 +25,11 @@ public class Task {
     private String title;
     private String description;
     private LocalDate dueDate;
-    private Status status;
+  @Enumerated(EnumType.STRING)
+@Column(name = "status", nullable = false)
+private Status status;
+
+
     @ManyToOne
     @JoinColumn(name="project_id", nullable=false)
     @JsonBackReference("project-tasks")
@@ -99,6 +106,10 @@ public class Task {
     }
     public void  assignUser(User user){
         this.user=user;
+    }
+
+    public User getAssignedUser() {
+        return this.user;
     }
    
 }
